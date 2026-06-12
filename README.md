@@ -1,4 +1,4 @@
-﻿# Xperience Task — Event RSVP Manager
+﻿﻿# Xperience Task — Event RSVP Manager
 
 > **Xperience Educational Program — Task 01**
 > Practice guide: [Building a Design File from Scratch with an AI Partner](https://xperience.works/educational-content/building-a-design-file-from-scratch-with-an-ai-partner)
@@ -49,15 +49,14 @@ Use this brief as input for **Step 02 – Capture the raw feature brief** in the
 
 Make sure the following are installed on your machine:
 
-- [ ] Java 17+ (Java 18 recommended — see note below)
+- [ ] Java 17+
+- [ ] Maven (or use the included `mvnw` wrapper)
 - [ ] Node.js 20+
 - [ ] PostgreSQL (running locally on port 5432)
 - [ ] pgAdmin (PostgreSQL GUI client)
 - [ ] Git
 - [ ] VS Code
 - [ ] GitHub Copilot extension for VS Code
-
-> **Java version note:** If your machine has multiple Java versions installed, make sure `JAVA_HOME` points to Java 17 or higher. Open `start-backend.ps1` and update the `JAVA_HOME` line if needed.
 
 ### Install VS Code
 
@@ -89,7 +88,7 @@ cd Xperience-Task-1-2026-04
 
 ### 2. Create the database
 
-Open pgAdmin and run:
+Open your PostgreSQL client and run:
 
 ```sql
 CREATE DATABASE hero;
@@ -99,37 +98,17 @@ CREATE SCHEMA hero;
 The default credentials expected by the app are `postgres / 1234`.
 If you used a different password, update `hero-backend/src/main/resources/application.yml`.
 
-### 3. Configure email (optional)
+### 3. Start the application
 
-The app sends invitation emails via Gmail SMTP. To enable this:
-
-1. Go to [myaccount.google.com](https://myaccount.google.com) → **Security** → **2-Step Verification** → **App passwords**
-2. Generate an App Password and copy the 16-character code
-3. Open `start-backend.ps1` and replace `YOUR_APP_PASSWORD_HERE` with your App Password
-
-If you skip this step, invitations are still created and saved — you can copy the RSVP link from the dashboard manually.
-
-### 4. Start the backend
-
-Open PowerShell and run:
+On Windows (PowerShell):
 
 ```powershell
-.\start-backend.ps1
+.\start.ps1
 ```
 
-Wait until you see `Started HeroApplication` in the output. The backend runs on **http://localhost:8280**.
-
-### 5. Start the frontend
-
-Open a second PowerShell window and run:
-
-```powershell
-cd hero-frontend
-npm install
-npm run dev
-```
-
-The frontend runs on **http://localhost:5171** — open this in your browser.
+This opens two terminal windows:
+- **Backend** → http://localhost:8280
+- **Frontend** → http://localhost:5171
 
 ---
 
@@ -203,177 +182,13 @@ Your design file will be reviewed against the **Definition of Success** from the
 - [ ] Visible risks and tradeoffs
 - [ ] Unresolved open questions listed
 
-
 ---
 
-## Implementation Complete ✅
+## Tips
 
-The Event RSVP Manager has been fully implemented following Spring Boot best practices and the 18-step design.
+- Follow the guide steps **in order**. Jumping to architecture before invariants produces weak design.
+- Interrogate AI output—do not copy it directly into `DESIGN.md`.
+- Open questions are a first-class section, not a cosmetic one.
+- Fluent AI output is not the same as disciplined output.
 
-### Backend Implementation (Spring Boot)
-
-#### Architecture
-Following Spring Boot best practices with separation of concerns:
-
-```
-com.xperience.hero/
-├── model/           → JPA Entities (Event, Invitation, RSVP)
-├── repository/      → Spring Data JPA Repositories
-├── service/         → Business Logic (EventService, RSVPService, InvitationService, EmailService)
-├── controller/      → REST Controllers (EventController, RSVPController)
-├── dto/            → Data Transfer Objects
-└── HeroApplication → Main Spring Boot Application
-```
-
-#### Key Components
-
-**Models (JPA Entities)**
-- `Event` — Event with title, location, date/time, capacity, status (OPEN/CLOSED/CANCELLED/STARTED_LOCKED)
-- `Invitation` — Stores invitee email and unique invite token
-- `RSVP` — Tracks RSVP status (YES_CONFIRMED, YES_WAITLISTED, NO, MAYBE), position in waitlist
-
-**Services**
-- `EventService` — Event lifecycle, capacity validation, state transitions
-- `RSVPService` — RSVP submission, automatic waitlist promotion (transactional)
-- `InvitationService` — Invitation generation, token management, email dispatch
-- `EmailService` — Simple email sender for RSVP invitations
-
-**Controllers**
-- `EventController` — POST `/api/events`, GET `/api/events/{id}`, POST `/api/events/{id}/invite`, GET `/api/events/{id}/dashboard`
-- `RSVPController` — POST `/api/rsvp/submit`, GET `/api/rsvp/{token}`, GET `/api/rsvp/invitation/{token}`
-
-**Key Business Logic**
-- Capacity enforcement: If max-capacity reached, new YES responses go to waitlist
-- Automatic promotion: When a confirmed attendee changes to NO, first waitlisted person is promoted (atomic transaction)
-- Lock after start: RSVPs rejected after event start time
-- Event state transitions: OPEN → CLOSED/CANCELLED or auto-lock when event starts
-
-#### Database (PostgreSQL)
-Three core tables with proper schema:
-```sql
--- hero.events (id, title, description, location, event_date_time, max_capacity, status, host_id, ...)
--- hero.invitations (id, event_id, invitee_email, invite_token, ...)
--- hero.rsvps (id, invitation_id, event_id, response_status, is_waitlisted, waitlist_position, ...)
-```
-
-### Frontend Implementation (React + TypeScript)
-
-#### Architecture
-```
-src/
-├── components/
-│   ├── EventCreation.tsx     → Host event creation form
-│   ├── Dashboard.tsx          → Host attendance dashboard
-│   └── RSVPResponse.tsx        → Invitee RSVP response page
-├── services/
-│   └── api.ts                → Axios API client with typed endpoints
-├── types.ts                  → TypeScript interfaces for all entities
-├── App.tsx                   → React Router setup
-├── App.css                   → App layout styles
-└── index.css                 → Global styles + component styles
-```
-
-#### Routes
-- `/` — Event creation
-- `/event/:eventId` — Host dashboard
-- `/rsvp/:token` — Invitee response page (unique link)
-
-#### Features Implemented
-
-**Event Creation** (`EventCreation.tsx`)
-- Form to create event with title, description, location, date/time, max capacity
-- Creates event via POST `/api/events`
-- Redirects to dashboard after creation
-
-**Host Dashboard** (`Dashboard.tsx`)
-- Displays event details
-- Shows RSVP counts: Confirmed, Maybe, Declined, Waitlist
-- Displays capacity bar (if max-capacity set)
-- Actions: Close Event, Cancel Event
-- Lists all attendees with their RSVP status and response time
-- Auto-fetches dashboard data from GET `/api/events/{id}/dashboard`
-
-**Invitee Response** (`RSVPResponse.tsx`)
-- Loads event details via unique invite token
-- Shows current RSVP status (if already responded)
-- Displays warning if event is locked or cancelled
-- Three response buttons: ✓ Yes, ? Maybe, ✗ No
-- Prevents changes after event start time
-- Shows waitlist position if applicable
-
-#### Styling
-- Professional CSS with responsive layout
-- Color-coded status badges (green=yes, yellow=maybe, red=no, blue=waitlist)
-- Gradient navbar with navigation
-- Stat cards for attendance overview
-- Mobile-responsive forms and tables
-
-### Dependencies Added
-
-**Backend (pom.xml)**
-- `spring-boot-starter-mail` — For email sending
-
-**Frontend (package.json)**
-- `react-router-dom@^6` — Client-side routing
-- `axios@^1.7` — HTTP client with typed API service
-
-### How to Run
-
-#### Backend
-```bash
-cd hero-backend
-mvnw clean install
-mvnw spring-boot:run
-# Backend runs on http://localhost:8280
-```
-
-#### Frontend
-```bash
-cd hero-frontend
-npm install
-npm run dev
-# Frontend runs on http://localhost:5173
-```
-
-#### Database Setup
-```sql
--- In PostgreSQL
-CREATE DATABASE hero;
-CREATE SCHEMA hero;
-
--- Tables auto-created by Hibernate (ddl-auto: update in application.yml)
-```
-
-### Key Architectural Decisions
-
-1. **Transactional Consistency** — RSVPService uses `@Transactional` to ensure atomic capacity checks + promotion
-2. **Token-Based Invitations** — Unique UUID tokens for secure, anonymous RSVP links (no user accounts required)
-3. **Stateful Events** — Four event states (OPEN, CLOSED, CANCELLED, STARTED_LOCKED) prevent invalid state transitions
-4. **FIFO Waitlist** — Position tracking ensures deterministic promotion order
-5. **Separate DTOs** — EventDTO enriched with counts for dashboard; RSVPs isolated from UI
-6. **CORS Enabled** — Controllers allow requests from React frontend on different port
-
-### Testing Workflow
-
-1. **Register** → Go to `http://localhost:5171/register` and create a host account
-2. **Create Event** → Click "Create Event" and fill the form
-3. **Send Invitations** → From the dashboard, enter invitee emails
-4. **Submit RSVP** → Open the RSVP link from the dashboard (or from the invitation email) and respond
-5. **View Dashboard** → Go to `/event/{eventId}` to see live counts
-6. **Test Waitlist** → Set capacity=2, invite 3 people, confirm first 2, third goes to waitlist
-7. **Test Promotion** → Change a confirmed to "No", watch waitlist person auto-promote
-
-### Implementation Status
-- ✅ Database schema with proper indexes
-- ✅ JPA entities with lifecycle callbacks
-- ✅ Spring Data repositories with custom queries
-- ✅ Transactional services with waitlist logic
-- ✅ REST controllers with CORS
-- ✅ React components with TypeScript
-- ✅ Routing and API integration
-- ✅ Styling and responsive design
-- ✅ Host authentication (register, login, logout, BCrypt passwords, session tokens)
-- ✅ Protected routes and ownership enforcement
-- ✅ Email delivery via Gmail SMTP (requires App Password — see setup)
-
----
+Good luck.
