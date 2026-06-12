@@ -49,14 +49,15 @@ Use this brief as input for **Step 02 – Capture the raw feature brief** in the
 
 Make sure the following are installed on your machine:
 
-- [ ] Java 17+
-- [ ] Maven (or use the included `mvnw` wrapper)
+- [ ] Java 17+ (Java 18 recommended — see note below)
 - [ ] Node.js 20+
 - [ ] PostgreSQL (running locally on port 5432)
 - [ ] pgAdmin (PostgreSQL GUI client)
 - [ ] Git
 - [ ] VS Code
 - [ ] GitHub Copilot extension for VS Code
+
+> **Java version note:** If your machine has multiple Java versions installed, make sure `JAVA_HOME` points to Java 17 or higher. Open `start-backend.ps1` and update the `JAVA_HOME` line if needed.
 
 ### Install VS Code
 
@@ -88,7 +89,7 @@ cd Xperience-Task-1-2026-04
 
 ### 2. Create the database
 
-Open your PostgreSQL client and run:
+Open pgAdmin and run:
 
 ```sql
 CREATE DATABASE hero;
@@ -98,17 +99,37 @@ CREATE SCHEMA hero;
 The default credentials expected by the app are `postgres / 1234`.
 If you used a different password, update `hero-backend/src/main/resources/application.yml`.
 
-### 3. Start the application
+### 3. Configure email (optional)
 
-On Windows (PowerShell):
+The app sends invitation emails via Gmail SMTP. To enable this:
+
+1. Go to [myaccount.google.com](https://myaccount.google.com) → **Security** → **2-Step Verification** → **App passwords**
+2. Generate an App Password and copy the 16-character code
+3. Open `start-backend.ps1` and replace `YOUR_APP_PASSWORD_HERE` with your App Password
+
+If you skip this step, invitations are still created and saved — you can copy the RSVP link from the dashboard manually.
+
+### 4. Start the backend
+
+Open PowerShell and run:
 
 ```powershell
-.\start.ps1
+.\start-backend.ps1
 ```
 
-This opens two terminal windows:
-- **Backend** → http://localhost:8280
-- **Frontend** → http://localhost:5171
+Wait until you see `Started HeroApplication` in the output. The backend runs on **http://localhost:8280**.
+
+### 5. Start the frontend
+
+Open a second PowerShell window and run:
+
+```powershell
+cd hero-frontend
+npm install
+npm run dev
+```
+
+The frontend runs on **http://localhost:5171** — open this in your browser.
 
 ---
 
@@ -334,12 +355,13 @@ CREATE SCHEMA hero;
 
 ### Testing Workflow
 
-1. **Create Event** → Navigate to `/` and fill form
-2. **Get Invitations** → Copy unique token from returned invitation
-3. **Submit RSVP** → Navigate to `/rsvp/{token}` and respond
-4. **View Dashboard** → Go to `/event/{eventId}` to see live counts
-5. **Test Waitlist** → Set capacity=2, invite 3 people, confirm first 2, third goes to waitlist
-6. **Test Promotion** → Change a confirmed to "No", watch waitlist person auto-promote
+1. **Register** → Go to `http://localhost:5171/register` and create a host account
+2. **Create Event** → Click "Create Event" and fill the form
+3. **Send Invitations** → From the dashboard, enter invitee emails
+4. **Submit RSVP** → Open the RSVP link from the dashboard (or from the invitation email) and respond
+5. **View Dashboard** → Go to `/event/{eventId}` to see live counts
+6. **Test Waitlist** → Set capacity=2, invite 3 people, confirm first 2, third goes to waitlist
+7. **Test Promotion** → Change a confirmed to "No", watch waitlist person auto-promote
 
 ### Implementation Status
 - ✅ Database schema with proper indexes
@@ -350,7 +372,8 @@ CREATE SCHEMA hero;
 - ✅ React components with TypeScript
 - ✅ Routing and API integration
 - ✅ Styling and responsive design
-- ⏸ Email delivery (configured, test via logs)
-- ⏸ Authentication (out of scope per design)
+- ✅ Host authentication (register, login, logout, BCrypt passwords, session tokens)
+- ✅ Protected routes and ownership enforcement
+- ✅ Email delivery via Gmail SMTP (requires App Password — see setup)
 
 ---
