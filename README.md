@@ -1,4 +1,4 @@
-﻿﻿# Xperience Task — Event RSVP Manager
+﻿# Xperience Task — Event RSVP Manager
 
 > **Xperience Educational Program — Task 01**
 > Practice guide: [Building a Design File from Scratch with an AI Partner](https://xperience.works/educational-content/building-a-design-file-from-scratch-with-an-ai-partner)
